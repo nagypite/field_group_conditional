@@ -1,0 +1,46 @@
+table.field-group-conditional { }
+table.field-group-conditional td { padding: 1em; border: none;}
+
+table.field-group-conditional .form-item > label,
+table.field-group-conditional .form-radios .form-item,
+table.field-group-conditional .form-checkboxes .form-item
+{display: inline-block; margin-right: 0.5em;}
+table.field-group-conditional .form-radios,
+table.field-group-conditional .form-checkboxes,
+{ display: inline;}
+
+table.field-group-conditional .form-item.form-type-textfield,
+table.field-group-conditional .form-item.form-type-item,
+table.field-group-conditional .form-item.form-type-date-combo
+{ display: table; width: 100%;}
+table.field-group-conditional .form-item.form-type-textfield > label,
+table.field-group-conditional .form-item.form-type-item > label,
+table.field-group-conditional .form-item.form-type-radios > label,
+table.field-group-conditional .form-item.form-type-date-combo > label
+{ display: table-cell; width: 1px; white-space: nowrap; padding-right: 1em; vertical-align: middle;}
+table.field-group-conditional .form-item.form-type-textfield > input,
+table.field-group-conditional .form-item.form-type-item .opr-item,
+table.field-group-conditional .form-item.form-type-date-combo .container-inline-date,
+table.field-group-conditional .form-item.form-type-radios > div.form-radios
+{ display: table-cell; width: 100%;}
+table.field-group-conditional .form-item.form-type-textfield > span.field-suffix { display: table-cell; width: 1px; white-space: nowrap; padding-left: 1em;}
+
+table.field-group-conditional .form-item.form-type-date-combo .date-padding { padding: 0;}
+
+table.field-group-conditional td.field-group-conditional-parent-heading { font-weight: bold; width: 20%;}
+table.field-group-conditional td.field-group-conditional-parent-field { width: 80%;}
+table.field-group-conditional td.field-group-conditional-child-indent { text-align: right; padding-right: 1em; width: 20%;}
+table.field-group-conditional td.field-group-conditional-child-field,
+table.field-group-conditional td.field-group-conditional-child-field-empty
+{ width: 40%;}
+
+table.field-group-conditional td.field-group-conditional-child-field-empty { text-align: right; padding-right: 1em; vertical-align: middle;}
+
+table.field-group-conditional td.field-group-conditional-parent-field .form-item,
+table.field-group-conditional td.field-group-conditional-child-field .form-item
+{ margin-top: 0; margin-bottom: 0;}
+/*
+td.field-group-conditional-parent-heading,
+td.field-group-conditional-child-indent { vertical-align: top; padding-top: 17px;}
+*/
+td.field-group-conditional-child-field .form-item label { font-weight: normal;}

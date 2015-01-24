@@ -1,0 +1,357 @@
+<?php
+
+/**
+ * @file field_group_conditional.module
+ */
+
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_PARENT', 0); // TODO ?
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_LEFT', 1);
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_RIGHT', 2);
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_BOTH', 3);
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN', 4);
+
+/**
+ * Implements hook_field_group_format_settings().
+ */
+function field_group_conditional_field_group_format_settings($group) {
+  // Add a wrapper for extra settings to use by others.
+  $form = array(
+    'instance_settings' => array(
+      '#tree' => TRUE,
+      '#weight' => 2,
+    ),
+  );
+
+  $field_group_types = field_group_formatter_info();
+  $mode = $group->mode == 'form' ? 'form' : 'display';
+  $formatter = $field_group_types[$mode][$group->format_type];
+
+// Add optional instance_settings.
+  switch ($group->format_type) {
+    case 'conditional':
+      $form['instance_settings']['col_map'] = array(
+        '#title' => t('Column layout'),
+        '#type' => 'textarea',
+        '#default_value' => isset($group->format_settings['instance_settings']['col_map']) ? $group->format_settings['instance_settings']['col_map'] : $formatter['instance_settings']['col_map'],
+        '#weight' => 2,
+      );
+      $form['instance_settings']['condition_text'] = array(
+        '#title' => t('Condition text'),
+        '#type' => 'textfield',
+        '#default_value' => isset($group->format_settings['instance_settings']['condition_text']) ? $group->format_settings['instance_settings']['condition_text'] : $formatter['instance_settings']['condition_text'],
+        '#weight' => 3,
+      );
+      break;
+  }
+
+  return $form;
+}
+
+/**
+ * Implements hook_field_group_formatter_info().
+ */
+function field_group_conditional_field_group_formatter_info() {
+  return array(
+    'display' => array(
+      'conditional' => array(
+        'label' => t('Conditional'),
+        'description' => t('This fieldgroup renders a main field and subfields in indented columns.'),
+        'instance_settings' => array(
+          'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
+          'condition_text' => t('If yes:'),
+          'classes' => '',
+        ),
+      ),
+    ),
+    'form' => array(
+      'conditional' => array(
+        'label' => t('Conditional'),
+        'description' => t('This fieldgroup renders a main field and subfields in indented columns.'),
+        'instance_settings' => array(
+          'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
+          'condition_text' => t('If yes:'),
+          'classes' => '',
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_group_pre_render().
+ */
+function field_group_conditional_field_group_pre_render(& $element, $group, & $form) {
+  if ($group->format_type != 'conditional') {
+    return;
+  }
+
+  // You can prepare some variables to use in the logic.
+  $mode = isset($form['#view_mode']) ? $form['#view_mode'] : 'form';
+  $settings = $group->format_settings['instance_settings'];
+  $id = $form['#entity_type'] . '_' . $form['#bundle'] . '_' . $mode . '_' . $group->group_name;
+  $label = check_plain($group->label);
+
+  // Create the element.
+  $element += array(
+    '#theme' => 'field_group_conditional_wrapper',
+    '#type' => 'markup',
+    '#title' => $label,
+    '#mode' => $mode,
+    '#groups' => array_keys($form['#groups']),
+    '#settings' => $settings,
+    '#attributes' => array(
+      'class' => array_merge(array('field-group-conditional', $group->group_name), explode(' ', $settings['classes'])),
+    ),
+    '#attached' => array('css'=>array(drupal_get_path('module', 'field_group_conditional').'/field_group_conditional.css')),
+    // We will add the table rows upon rendering, as doing it here means
+    // messing up the field group hierarchy, which causes issues.
+    '#field_group_conditional' => array(
+      '#theme' => "table__field_group_conditional__$group->group_name",
+      '#attributes' => array(
+        'class' => array('field-group-format', $group->group_name, 'field-group-conditional'),
+      ),
+    ),
+  );
+
+  if (!empty($settings['show_label'])) {
+    $element['#caption'] = array(
+      '#type' => 'item',
+      '#title' => $label,
+      //    '#description' => field_filter_xss($settings['desc']),
+    );
+  }
+
+}
+
+/**
+ * Returns HTML for a field_group_conditional_wrapper.
+ */
+function theme_field_group_conditional_wrapper($variables) {
+  $element = $variables['element'];
+  $mode = $element['#mode'];
+  $settings = $element['#settings'];
+  $col_map = _field_group_conditional_decode_col_map($settings['col_map']);
+
+  $children = element_children($element, TRUE);
+
+  // Build the table rows.
+  $rows = array();
+  $descriptions = array();
+  $col_map_pos = array(0, 0);
+  $child_count = count($children);
+  foreach ($children as $child_nr => $child) {
+    $variables = array(
+      'element' => $element[$child],
+      'settings' => $settings,
+      'mode' => $mode,
+    );
+    unset($element[$child]);
+
+//  Attempt to find a title we can use.
+    if (isset($variables['element']['#title'])) {
+      $field_element =& $variables['element'];
+//      $variables['element']['#title'] = '';
+    }
+    elseif (isset($variables['element']['#language']) && isset($variables['element'][$variables['element']['#language']]['#title'])) {
+      $field_element =& $variables['element'][$variables['element']['#language']];
+//      $variables['element'][$variables['element']['#language']]['#title'] = '';
+    }
+    elseif (isset($variables['element']['#language']) && isset($variables['element'][$variables['element']['#language']][0]['#title'])) {
+      $field_element =& $variables['element'][$variables['element']['#language']][0];
+//      $variables['element'][$variables['element']['#language']][0]['#title'] = '';
+    } else {
+      $field_element =& $variables['element'];
+      $field_element['#title'] = '';
+    }
+
+    $title = $field_element['#title'];
+
+// reverse list_boolean values TODO: toggle by setting
+    if(false && isset($field_element['#type']) && $field_element['#type'] == 'radios') {
+      $field_info = field_info_field($field_element['#field_name']);
+      if ($field_info['type'] == 'list_boolean') {
+        $field_element['#options'] = array_reverse($field_element['#options'], true);
+        $field_element[1]['#weight'] = 0.0001;
+        $field_element[0]['#weight'] = 0.0002;
+      }
+    }
+
+//    dpm($field_element, $child);
+    if (empty($rows)) {
+//    parent row
+
+      $row = array(
+        'data' => array(),
+        'no_striping' => true,
+      );
+      $row_close = true;
+      $field_element['#title_display'] = 'attribute';
+      $row['data'][] = array('data'=>$title.':','class'=>'field-group-conditional-parent-heading');
+      $row['data'][] = array('data'=>$variables['element'],'class'=>'field-group-conditional-parent-field','colspan'=>2);
+
+      $parent_selector = isset($field_element['#name']) ? ":input[name=\"{$field_element['#name']}\"]" : null;
+
+    } else {
+
+      $value_col = isset($field_element[0]['#columns'][0]) ?
+        $field_element[0]['#columns'][0] :
+        isset($field_element[0]['value']) ? 'value' : null;
+
+      if ($value_col && !empty($field_element[0][$value_col]['#title'])) {
+        $title_element =& $field_element[0][$value_col];
+
+      } else if (!empty($field_element[0]['#title']) && $field_element[0]['#title'] == $field_element['#title']) {
+        $title_element =& $field_element[0];
+
+      } else if (!empty($field_element['#title'])) {
+        $title_element =& $field_element;
+      }
+
+      if (!preg_match('/:$/', $title_element['#title']) && (isset($title_element['#type']) && $title_element['#type']!='checkbox')) {
+        $title_element['#title'] .= ':';
+      }
+
+      if ($parent_selector) {
+        $states = array();
+        $states['#states']['enabled'][$parent_selector]['value'] = '1';
+        $field_element = _field_group_conditional_set_attributes($field_element, $states);
+      }
+
+      if (!empty($title_element['#description'])) {
+        $descriptions[] = $title_element['#description'];
+        unset($title_element['#description']);
+      }
+
+      switch ($col_map[$col_map_pos[0]][0]) {
+      case FIELD_GROUP_CONDITIONAL_COL_MAP_LEFT: // single left
+        $row_start = true;
+        $row_close = true;
+        $row_span = false;
+        $col_map_pos[1] = 0;
+        break;
+
+      case FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN: // single spanning
+        $row_start = true;
+        $row_close = true;
+        $row_span = true;
+        $col_map_pos[1] = 0;
+        break;
+
+      case FIELD_GROUP_CONDITIONAL_COL_MAP_RIGHT: // single right
+        $row_start = true;
+        $row_close = true;
+        $row_span = false;
+        $col_map_pos[1] = 1;
+        break;
+
+      case FIELD_GROUP_CONDITIONAL_COL_MAP_BOTH: // two-col
+        $row_start = $col_map_pos[1] < 1;
+        $row_close = $col_map_pos[1] > 0;
+        $row_span = false;
+        break;
+      }
+
+      if (!$row_close && $child_nr == $child_count-1) {
+        $row_close = true;
+      }
+
+      if ($row_start) {
+        $row = array(
+          'data' => array(),
+          'no_striping' => true,
+        );
+        $row['data'][] = array('data'=>(count($rows)===1?$variables['settings']['condition_text']:''),'class'=>'field-group-conditional-child-indent');
+        if ($col_map_pos[1] > 0) {
+          $row['data'][] = array('data'=>empty($col_map[$col_map_pos[0]][1])?'&nbsp;':$col_map[$col_map_pos[0]][1],'class'=>'field-group-conditional-child-field-empty');
+        }
+      }
+
+      $field_col = array('data'=>$variables['element'],'class'=>'field-group-conditional-child-field');
+      if ($row_span) {
+        $field_col['colspan'] = 2;
+      }
+      $row['data'][] = $field_col;
+
+      if ($row_close) {
+        if ($col_map_pos[1] < 1 && !$row_span) {
+          $row['data'][] = array('data'=>empty($col_map[$col_map_pos[0]][1])?'&nbsp;':$col_map[$col_map_pos[0]][1],'class'=>'field-group-conditional-child-field-empty');
+        }
+
+        $col_map_pos[1] = 0;
+        if (count($col_map) > $col_map_pos[0]+1) $col_map_pos[0]++;
+
+      } else {
+        $col_map_pos[1] = 1;
+      }
+    }
+
+    if (!empty($row_close)) {
+      $rows[] = $row;
+    }
+  }
+
+  if (!empty($descriptions)) {
+    foreach ($descriptions as $desc) {
+      $rows[] = array('data' => array(
+        array('data'=>'&nbsp;','class'=>'field-group-conditional-child-indent'),
+        array('data'=>$desc,'field-group-conditional-child-description','colspan'=>2),
+        ),
+        'no_striping' => true,
+      );
+    }
+  }
+
+  $element['#field_group_conditional']['#rows'] = $rows;
+
+  $render = array(
+    '#theme' => 'container',
+    '#attributes' => array(
+      'id' => isset($element['#id']) ? $element['#id'] : '',
+    ) + $element['#attributes'],
+  );
+
+  $render['#children'] = drupal_render($element['#caption']) . "\n";
+  $render['#children'] .= drupal_render($element['#field_group_conditional']) . "\n";
+
+  return drupal_render($render);
+}
+
+/**
+ * Implements hook_ctools_plugin_api().
+ */
+function field_group_conditional_ctools_plugin_api($module, $api) {
+  if ($module == 'field_group' && $api == 'field_group') {
+    return array('version' => 1);
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function field_group_conditional_theme() {
+  return array(
+    'field_group_conditional_wrapper' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+function _field_group_conditional_decode_col_map($col_map_str) {
+  $col_map = array();
+
+  foreach (explode("\n", $col_map_str) as $col_map_ln) {
+    $col_settings = explode('|', $col_map_ln);
+    $col_map[] = $col_settings;
+  }
+
+  return $col_map;
+}
+
+function _field_group_conditional_set_attributes($element, $attributes = array(), $depth=0) {
+  if ( $depth > 6 ) return $element; // put a limit on recursion
+  $element = array_merge($element, $attributes);
+  foreach ( element_children($element) as $name ) {
+    $element[$name] = _field_group_conditional_set_attributes($element[$name], $attributes, $depth+1);
+  }
+  return $element;
+}

@@ -1,0 +1,5 @@
+name = Field group conditional
+description = Field group plugin adding a conditionally formatted field group
+dependencies[] = field_group
+package = Fields
+core = 7.x
