@@ -35,10 +35,10 @@ function field_group_conditional_field_group_format_settings($group) {
         '#default_value' => isset($group->format_settings['instance_settings']['col_map']) ? $group->format_settings['instance_settings']['col_map'] : $formatter['instance_settings']['col_map'],
         '#weight' => 2,
       );
-      $form['instance_settings']['condition_text'] = array(
+      $form['instance_settings']['condition_alt'] = array(
         '#title' => t('Condition text'),
         '#type' => 'textfield',
-        '#default_value' => isset($group->format_settings['instance_settings']['condition_text']) ? $group->format_settings['instance_settings']['condition_text'] : $formatter['instance_settings']['condition_text'],
+        '#default_value' => isset($group->format_settings['instance_settings']['condition_alt']) ? $group->format_settings['instance_settings']['condition_alt'] : @$formatter['instance_settings']['condition_alt'],
         '#weight' => 3,
       );
       break;
@@ -58,7 +58,7 @@ function field_group_conditional_field_group_formatter_info() {
         'description' => t('This fieldgroup renders a main field and subfields in indented columns.'),
         'instance_settings' => array(
           'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
-          'condition_text' => t('If yes:'),
+          'condition_alt' => '',
           'classes' => '',
         ),
       ),
@@ -69,7 +69,7 @@ function field_group_conditional_field_group_formatter_info() {
         'description' => t('This fieldgroup renders a main field and subfields in indented columns.'),
         'instance_settings' => array(
           'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
-          'condition_text' => t('If yes:'),
+          'condition_alt' => '',
           'classes' => '',
         ),
       ),
@@ -260,7 +260,7 @@ function theme_field_group_conditional_wrapper($variables) {
           'data' => array(),
           'no_striping' => true,
         );
-        $row['data'][] = array('data'=>(count($rows)===1?$variables['settings']['condition_text']:''),'class'=>'field-group-conditional-child-indent');
+        $row['data'][] = array('data'=>(count($rows)===1?empty($variables['settings']['condition_alt'])?t('If yes:'):$variables['settings']['condition_alt']:''),'class'=>'field-group-conditional-child-indent');
         if ($col_map_pos[1] > 0) {
           $row['data'][] = array('data'=>empty($col_map[$col_map_pos[0]][1])?'&nbsp;':$col_map[$col_map_pos[0]][1],'class'=>'field-group-conditional-child-field-empty');
         }
@@ -354,4 +354,8 @@ function _field_group_conditional_set_attributes($element, $attributes = array()
     $element[$name] = _field_group_conditional_set_attributes($element[$name], $attributes, $depth+1);
   }
   return $element;
+}
+
+function _field_group_conditional_translate($string, $name) {
+  return function_exists('i18n_string') ? i18n_string_translate("field_group:$name", $string) : $string;
 }
