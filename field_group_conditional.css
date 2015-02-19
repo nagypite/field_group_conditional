@@ -1,4 +1,4 @@
-table.field-group-conditional { }
+table.field-group-conditional { position: relative;}
 table.field-group-conditional td { padding: 1em; border: none;}
 
 table.field-group-conditional .form-item > label,
@@ -44,3 +44,7 @@ td.field-group-conditional-parent-heading,
 td.field-group-conditional-child-indent { vertical-align: top; padding-top: 17px;}
 */
 td.field-group-conditional-child-field .form-item label { font-weight: normal;}
+
+table.field-group-conditional td.field-group-conditional-label-col h4 { margin-bottom: 0;}
+
+table.field-group-conditional td.field-group-conditional-child-description img.opr-helper-image { position: absolute; top: 5px; right: 5px;}

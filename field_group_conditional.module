@@ -9,6 +9,7 @@ define('FIELD_GROUP_CONDITIONAL_COL_MAP_LEFT', 1);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_RIGHT', 2);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_BOTH', 3);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN', 4);
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_LABEL', 5);
 
 /**
  * Implements hook_field_group_format_settings().
@@ -222,6 +223,30 @@ function theme_field_group_conditional_wrapper($variables) {
         unset($title_element['#description']);
       }
 
+      if ($col_map[$col_map_pos[0]][0] == FIELD_GROUP_CONDITIONAL_COL_MAP_LABEL) {
+        $row_label = empty($col_map[$col_map_pos[0]][2]) || $GLOBALS['language']->language == 'hu' ? $col_map[$col_map_pos[0]][1] : $col_map[$col_map_pos[0]][2];
+        $additional_row = array(
+          'data' => array(
+            array(
+              'data' => '&nbsp;',
+              'class' => 'field-group-conditional-child-indent',
+            ),
+            array(
+              'data' => '<h4>'.check_plain($row_label).'</h4>',
+              'colspan' => 2,
+              'class' => 'field-group-conditional-label-col',
+            ),
+          ),
+          'no_striping' => true,
+          'class' => 'field-group-conditional-label-row',
+        );
+        $col_map_pos[0]++;
+        $rows[] = $additional_row;
+
+      } else {
+        $additional_row = false;
+      }
+
       switch ($col_map[$col_map_pos[0]][0]) {
       case FIELD_GROUP_CONDITIONAL_COL_MAP_LEFT: // single left
         $row_start = true;
@@ -294,7 +319,7 @@ function theme_field_group_conditional_wrapper($variables) {
     foreach ($descriptions as $desc) {
       $rows[] = array('data' => array(
         array('data'=>'&nbsp;','class'=>'field-group-conditional-child-indent'),
-        array('data'=>$desc,'field-group-conditional-child-description','colspan'=>2),
+        array('data'=>$desc,'class'=>'field-group-conditional-child-description','colspan'=>2),
         ),
         'no_striping' => true,
       );
