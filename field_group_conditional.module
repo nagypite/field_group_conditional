@@ -10,6 +10,7 @@ define('FIELD_GROUP_CONDITIONAL_COL_MAP_RIGHT', 2);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_BOTH', 3);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN', 4);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_LABEL', 5);
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_IFNO', 6);
 
 /**
  * Implements hook_field_group_format_settings().
@@ -194,6 +195,7 @@ function theme_field_group_conditional_wrapper($variables) {
 
     } else {
 
+      $state_ifyes = true;
       $value_col = isset($field_element[0]['#columns'][0]) ?
         $field_element[0]['#columns'][0] :
         isset($field_element[0]['value']) ? 'value' : null;
@@ -208,18 +210,31 @@ function theme_field_group_conditional_wrapper($variables) {
         $title_element =& $field_element;
       }
 
-      if (!preg_match('/:$/', $title_element['#title']) && (isset($title_element['#type']) && $title_element['#type']!='checkbox')) {
+      if (isset($title_element) && !preg_match('/:$/', $title_element['#title']) && (isset($title_element['#type']) && $title_element['#type']!='checkbox')) {
         $title_element['#title'] .= ':';
+      }
+
+      if ($col_map[$col_map_pos[0]][0] == FIELD_GROUP_CONDITIONAL_COL_MAP_IFNO) {
+        $state_ifyes = false;
+        $state_print_label = t('If no:');
+        $col_map_pos[0]++;
+
+      } else if (count($rows) === 1) {
+        $state_print_label = empty($variables['settings']['condition_alt'])?t('If yes:'):$variables['settings']['condition_alt'];
+
+      } else {
+        $state_print_label = false;
       }
 
       if ($parent_selector) {
         $states = array();
-        $states['#states']['enabled'][$parent_selector]['value'] = '1';
+        $states['#states']['enabled'][$parent_selector]['value'] = $state_ifyes ? '1' : '0';
         $field_element = _field_group_conditional_set_attributes($field_element, $states);
       }
 
       if (!empty($title_element['#description'])) {
-        $descriptions[] = $title_element['#description'];
+        $translation = i18n_string_translate(array('field', $field_element['#field_name'], $field_element['#bundle'], 'description'), $title_element['#description'], array('langcode'=>$GLOBALS['language']->language, 'sanitize'=>FALSE));
+        $descriptions[] = $translation;
         unset($title_element['#description']);
       }
 
@@ -285,7 +300,9 @@ function theme_field_group_conditional_wrapper($variables) {
           'data' => array(),
           'no_striping' => true,
         );
-        $row['data'][] = array('data'=>(count($rows)===1?empty($variables['settings']['condition_alt'])?t('If yes:'):$variables['settings']['condition_alt']:''),'class'=>'field-group-conditional-child-indent');
+        $row['data'][] = array(
+          'data'=>($state_print_label?$state_print_label:''),'class'=>'field-group-conditional-child-indent'
+        );
         if ($col_map_pos[1] > 0) {
           $row['data'][] = array('data'=>empty($col_map[$col_map_pos[0]][1])?'&nbsp;':$col_map[$col_map_pos[0]][1],'class'=>'field-group-conditional-child-field-empty');
         }

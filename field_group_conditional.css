@@ -49,6 +49,8 @@ table.field-group-conditional td.field-group-conditional-label-col h4 { margin-b
 
 table.field-group-conditional td.field-group-conditional-child-description img.opr-helper-image { position: absolute; top: 5px; right: 5px;}
 
+/*
 table.field-group-conditional .field-type-list-boolean .form-item.form-type-radios input[value="_none"],
 table.field-group-conditional .field-type-list-boolean .form-item.form-type-radios input[value="_none"] + label.option
 { display: none;}
+*/
