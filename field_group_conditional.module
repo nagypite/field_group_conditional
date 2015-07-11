@@ -89,7 +89,7 @@ function field_group_conditional_field_group_pre_render(& $element, $group, & $f
 
   // You can prepare some variables to use in the logic.
   $mode = isset($form['#view_mode']) ? $form['#view_mode'] : 'form';
-  $settings = $group->format_settings['instance_settings'];
+  $settings = $group->format_settings['instance_settings'] + array('classes'=>'');
   $id = $form['#entity_type'] . '_' . $form['#bundle'] . '_' . $mode . '_' . $group->group_name;
   $label = check_plain($group->label);
 
@@ -167,15 +167,8 @@ function theme_field_group_conditional_wrapper($variables) {
     }
 
     $title = $field_element['#title'];
-
-// reverse list_boolean values TODO: toggle by setting
-    if(false && isset($field_element['#type']) && $field_element['#type'] == 'radios') {
-      $field_info = field_info_field($field_element['#field_name']);
-      if ($field_info['type'] == 'list_boolean') {
-        $field_element['#options'] = array_reverse($field_element['#options'], true);
-        $field_element[1]['#weight'] = 0.0001;
-        $field_element[0]['#weight'] = 0.0002;
-      }
+    if (!preg_match('/[?:]$/', $title)) {
+      $title .= ':';
     }
 
 //    dpm($field_element, $child);
@@ -188,10 +181,15 @@ function theme_field_group_conditional_wrapper($variables) {
       );
       $row_close = true;
       $field_element['#title_display'] = 'attribute';
-      $row['data'][] = array('data'=>$title.':','class'=>'field-group-conditional-parent-heading');
+      if (!empty($field_element['#description']) && !empty($field_element['#field_name'])) {
+        $translation = i18n_string_translate(array('field', $field_element['#field_name'], $field_element['#bundle'], 'description'), $field_element['#description'], array('langcode'=>$GLOBALS['language']->language, 'sanitize'=>FALSE));
+        $field_element['#description'] = $translation;
+      }
+      $row['data'][] = array('data'=>$title,'class'=>'field-group-conditional-parent-heading');
       $row['data'][] = array('data'=>$variables['element'],'class'=>'field-group-conditional-parent-field','colspan'=>2);
 
       $parent_selector = isset($field_element['#name']) ? ":input[name=\"{$field_element['#name']}\"]" : null;
+      $element['#attributes']['data-parent'] = $parent_selector;
 
     } else {
 
@@ -200,6 +198,7 @@ function theme_field_group_conditional_wrapper($variables) {
         $field_element[0]['#columns'][0] :
         isset($field_element[0]['value']) ? 'value' : null;
 
+      unset($title_element);
       if ($value_col && !empty($field_element[0][$value_col]['#title'])) {
         $title_element =& $field_element[0][$value_col];
 
@@ -208,6 +207,9 @@ function theme_field_group_conditional_wrapper($variables) {
 
       } else if (!empty($field_element['#title'])) {
         $title_element =& $field_element;
+
+      } else {
+        $title_element = null;
       }
 
       if (isset($title_element) && !preg_match('/:$/', $title_element['#title']) && (isset($title_element['#type']) && $title_element['#type']!='checkbox')) {
@@ -216,7 +218,7 @@ function theme_field_group_conditional_wrapper($variables) {
 
       if ($col_map[$col_map_pos[0]][0] == FIELD_GROUP_CONDITIONAL_COL_MAP_IFNO) {
         $state_ifyes = false;
-        $state_print_label = t('If no:');
+        $state_print_label = t('If not:');
         $col_map_pos[0]++;
 
       } else if (count($rows) === 1) {
@@ -229,7 +231,16 @@ function theme_field_group_conditional_wrapper($variables) {
       if ($parent_selector) {
         $states = array();
         $states['#states']['enabled'][$parent_selector]['value'] = $state_ifyes ? '1' : '0';
-        $field_element = _field_group_conditional_set_attributes($field_element, $states);
+//        $field_element = _field_group_conditional_set_attributes($field_element, $states);
+
+        $element_names = _field_group_conditional_find_element_with_attribute($field_element, '#name', TRUE);
+        if (!empty($element_names)) {
+          foreach ($element_names as $element_name) {
+            $element['#attributes']['data-children'][":input[name=\"$element_name\"]"] = $state_ifyes;
+          }
+        } else {
+//          $element['#attributes']['data-children']['fails'][] = $field_element;
+        }
       }
 
       if (!empty($title_element['#description'])) {
@@ -345,12 +356,17 @@ function theme_field_group_conditional_wrapper($variables) {
 
   $element['#field_group_conditional']['#rows'] = $rows;
 
+  if (!empty($element['#attributes']['data-children'])) {
+    $element['#attributes']['data-children'] = json_encode($element['#attributes']['data-children']);
+  }
+
   $render = array(
     '#theme' => 'container',
     '#attributes' => array(
       'id' => isset($element['#id']) ? $element['#id'] : '',
     ) + $element['#attributes'],
   );
+  $render['#attached']['js'][] = drupal_get_path('module', 'field_group_conditional').'/field_group_conditional.js';
 
   $render['#children'] = drupal_render($element['#caption']) . "\n";
   $render['#children'] .= drupal_render($element['#field_group_conditional']) . "\n";
@@ -400,4 +416,22 @@ function _field_group_conditional_set_attributes($element, $attributes = array()
 
 function _field_group_conditional_translate($string, $name) {
   return function_exists('i18n_string') ? i18n_string_translate("field_group:$name", $string) : $string;
+}
+
+function _field_group_conditional_find_element_with_attribute(&$element, $attribute, $return_all = FALSE, $return_reference = FALSE) {
+  $return = array();
+
+  if (!empty($element[$attribute])) $return[] = $return_reference ? $element : $element[$attribute];
+  if (!$return_all) return $return[0];
+
+  foreach (element_children($element) as $name) {
+    $child_return = _field_group_conditional_find_element_with_attribute($element[$name], $attribute, $return_all, $return_reference);
+
+    if (!empty($child_return)) {
+      if (!$return_all) return $return;
+      else $return = array_merge($return, $child_return);
+    }
+  }
+
+  return $return_all ? $return : NULL;
 }
