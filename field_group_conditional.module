@@ -43,6 +43,18 @@ function field_group_conditional_field_group_format_settings($group) {
         '#default_value' => isset($group->format_settings['instance_settings']['condition_alt']) ? $group->format_settings['instance_settings']['condition_alt'] : @$formatter['instance_settings']['condition_alt'],
         '#weight' => 3,
       );
+      $form['instance_settings']['singlecol_head'] = array(
+        '#title' => t('Head row in a single column'),
+        '#type' => 'checkbox',
+        '#default_value' => isset($group->format_settings['instance_settings']['singlecol_head']) ? $group->format_settings['instance_settings']['singlecol_head'] : @$formatter['instance_settings']['singlecol_head'],
+        '#weight' => 4,
+      );
+      $form['instance_settings']['keep_descriptions'] = array(
+        '#title' => t('Leave descriptions at their corresponding fields'),
+        '#type' => 'checkbox',
+        '#default_value' => isset($group->format_settings['instance_settings']['keep_descriptions']) ? $group->format_settings['instance_settings']['keep_descriptions'] : @$formatter['instance_settings']['keep_descriptions'],
+        '#weight' => 4,
+      );
       break;
   }
 
@@ -61,6 +73,8 @@ function field_group_conditional_field_group_formatter_info() {
         'instance_settings' => array(
           'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
           'condition_alt' => '',
+          'singlecol_head' => '',
+          'keep_descriptions' => '',
           'classes' => '',
         ),
       ),
@@ -72,6 +86,8 @@ function field_group_conditional_field_group_formatter_info() {
         'instance_settings' => array(
           'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
           'condition_alt' => '',
+          'singlecol_head' => '',
+          'keep_descriptions' => '',
           'classes' => '',
         ),
       ),
@@ -149,6 +165,14 @@ function theme_field_group_conditional_wrapper($variables) {
     );
     unset($element[$child]);
 
+    // handle non-field non-group elements
+    if (isset($variables['element']['#type']) && $variables['element']['#type'] == 'markup') {
+      if (!empty($variables['element']['#field_group_note'])) {
+        $element['#field_group_conditional_leftouts'][$child] = $variables['element'];
+        continue;
+      }
+    }
+
 //  Attempt to find a title we can use.
     if (isset($variables['element']['#title'])) {
       $field_element =& $variables['element'];
@@ -185,8 +209,31 @@ function theme_field_group_conditional_wrapper($variables) {
         $translation = i18n_string_translate(array('field', $field_element['#field_name'], $field_element['#bundle'], 'description'), $field_element['#description'], array('langcode'=>$GLOBALS['language']->language, 'sanitize'=>FALSE));
         $field_element['#description'] = $translation;
       }
-      $row['data'][] = array('data'=>$title,'class'=>'field-group-conditional-parent-heading');
-      $row['data'][] = array('data'=>$variables['element'],'class'=>'field-group-conditional-parent-field','colspan'=>2);
+
+      // optionally print parent row in a single column
+      if (!empty($variables['settings']['singlecol_head'])) {
+        $singlecol_head = array(
+          '#type' => 'container',
+          '#attributes' => array(
+            'class' => array('field-group-conditional-parent-singlecol-container'),
+          ),
+          'title' => array(
+            '#markup' => $title,
+            '#prefix' => '<div class="field-group-conditional-parent-singlecol-title">',
+            '#suffix' => '</div>',
+          ),
+          'element' => $variables['element'],
+        );
+        $row['data'][] = array(
+          'data' => $singlecol_head,
+          'class' => 'field-group-conditional-parent-singlecol',
+          'colspan' => 3,
+        );
+
+      } else {
+        $row['data'][] = array('data'=>$title,'class'=>'field-group-conditional-parent-heading');
+        $row['data'][] = array('data'=>$variables['element'],'class'=>'field-group-conditional-parent-field','colspan'=>2);
+      }
 
       $parent_selector = isset($field_element['#name']) ? ":input[name=\"{$field_element['#name']}\"]" : null;
       $element['#attributes']['data-parent'] = $parent_selector;
@@ -243,7 +290,7 @@ function theme_field_group_conditional_wrapper($variables) {
         }
       }
 
-      if (!empty($title_element['#description'])) {
+      if (empty($variables['settings']['keep_descriptions']) && !empty($title_element['#description'])) {
         $translation = i18n_string_translate(array('field', $field_element['#field_name'], $field_element['#bundle'], 'description'), $title_element['#description'], array('langcode'=>$GLOBALS['language']->language, 'sanitize'=>FALSE));
         $descriptions[] = $translation;
         unset($title_element['#description']);
@@ -369,6 +416,9 @@ function theme_field_group_conditional_wrapper($variables) {
   $render['#attached']['js'][] = drupal_get_path('module', 'field_group_conditional').'/field_group_conditional.js';
 
   $render['#children'] = drupal_render($element['#caption']) . "\n";
+  if (!empty($element['#field_group_conditional_leftouts'])) {
+    $render['#children'] .= drupal_render($element['#field_group_conditional_leftouts']) . "\n";
+  }
   $render['#children'] .= drupal_render($element['#field_group_conditional']) . "\n";
 
   return drupal_render($render);
