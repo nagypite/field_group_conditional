@@ -11,6 +11,7 @@ define('FIELD_GROUP_CONDITIONAL_COL_MAP_BOTH', 3);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN', 4);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_LABEL', 5);
 define('FIELD_GROUP_CONDITIONAL_COL_MAP_IFNO', 6);
+define('FIELD_GROUP_CONDITIONAL_COL_MAP_IFOTHER', 7);
 
 /**
  * Implements hook_field_group_format_settings().
@@ -237,10 +238,10 @@ function theme_field_group_conditional_wrapper($variables) {
 
       $parent_selector = isset($field_element['#name']) ? ":input[name=\"{$field_element['#name']}\"]" : null;
       $element['#attributes']['data-parent'] = $parent_selector;
+      $state_ifvalue = '1';
 
     } else {
 
-      $state_ifyes = true;
       $value_col = isset($field_element[0]['#columns'][0]) ?
         $field_element[0]['#columns'][0] :
         isset($field_element[0]['value']) ? 'value' : null;
@@ -264,26 +265,39 @@ function theme_field_group_conditional_wrapper($variables) {
       }
 
       if ($col_map[$col_map_pos[0]][0] == FIELD_GROUP_CONDITIONAL_COL_MAP_IFNO) {
-        $state_ifyes = false;
+        $state_ifvalue = '0';
         $state_print_label = t('If not:');
         $col_map_pos[0]++;
-
-      } else if (count($rows) === 1) {
+      }
+      else if ($col_map[$col_map_pos[0]][0] == FIELD_GROUP_CONDITIONAL_COL_MAP_IFOTHER) {
+        $state_ifvalue = explode(',', $col_map[$col_map_pos[0]][1]);
+        $state_print_label = '';
+        if (count($col_map[$col_map_pos[0]]) > 2) {
+          if (count($col_map[$col_map_pos[0]]) > 3 && $GLOBALS['language']->language == 'en') {
+            $state_print_label = $col_map[$col_map_pos[0]][3];
+          }
+          else {
+            $state_print_label = $col_map[$col_map_pos[0]][2];
+          }
+        }
+        $col_map_pos[0]++;
+      }
+      else if (count($rows) === 1) {
         $state_print_label = empty($variables['settings']['condition_alt'])?t('If yes:'):$variables['settings']['condition_alt'];
-
-      } else {
+      }
+      else {
         $state_print_label = false;
       }
 
       if ($parent_selector) {
         $states = array();
-        $states['#states']['enabled'][$parent_selector]['value'] = $state_ifyes ? '1' : '0';
+        $states['#states']['enabled'][$parent_selector]['value'] = $state_ifvalue;
 //        $field_element = _field_group_conditional_set_attributes($field_element, $states);
 
         $element_names = _field_group_conditional_find_element_with_attribute($field_element, '#name', TRUE);
         if (!empty($element_names)) {
           foreach ($element_names as $element_name) {
-            $element['#attributes']['data-children'][":input[name=\"$element_name\"]"] = $state_ifyes;
+            $element['#attributes']['data-children'][":input[name=\"$element_name\"]"] = $state_ifvalue;
           }
         } else {
 //          $element['#attributes']['data-children']['fails'][] = $field_element;

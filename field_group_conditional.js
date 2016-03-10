@@ -14,11 +14,11 @@ Drupal.behaviors.FieldGroupConditional = {
         return;
       }
 
-      for (childSelector in children) {
+      for (var childSelector in children) {
         var $child = $this.find(childSelector);
         if (!$child.length) continue;
 
-        childMap.push({obj:$child, ifyes:children[childSelector]});
+        childMap.push({obj:$child, ifvalue:children[childSelector]});
       }
 
       $parentEmt.change(function(){
@@ -26,7 +26,19 @@ Drupal.behaviors.FieldGroupConditional = {
 
 //        console.log('parentChange', $parentEmt, parentVal);
         $.each(childMap, function(cid, child) {
-          disabled = parentVal === undefined || child.ifyes ? parentVal !== '1' : parentVal !== '0'; // TODO disable when undefined
+          console.log('childmap', parentSelector, parentVal, child);
+          if (parentVal === undefined) {
+            disabled = true;
+          }
+          else {
+            if (child.ifvalue instanceof Array) {
+              disabled = child.ifvalue.indexOf(parentVal) < 0;
+            }
+            else {
+              disabled = child.ifvalue !== parentVal;
+            }
+          }
+
           child.obj.attr('disabled', disabled);
 //          console.log('childToggle', child.obj.attr('name'), disabled, $parentEmt.attr('name'));
           if (disabled) changeQueue.push(child.obj.first());
