@@ -26,7 +26,7 @@ Drupal.behaviors.FieldGroupConditional = {
 
 //        console.log('parentChange', $parentEmt, parentVal);
         $.each(childMap, function(cid, child) {
-          console.log('childmap', parentSelector, parentVal, child);
+//          console.log('childmap', parentSelector, parentVal, child);
           if (parentVal === undefined) {
             disabled = true;
           }
