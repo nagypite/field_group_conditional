@@ -214,7 +214,7 @@ function theme_field_group_conditional_wrapper($variables) {
       );
       $row_close = true;
       $field_element['#title_display'] = 'attribute';
-      if (!empty($field_element['#description']) && !empty($field_element['#field_name'])) {
+      if (!empty($field_element['#description']) && !empty($field_element['#field_name']) && function_exists('i18n_string_translate')) {
         $translation = i18n_string_translate(array('field', $field_element['#field_name'], $field_element['#bundle'], 'description'), $field_element['#description'], array('langcode'=>$GLOBALS['language']->language, 'sanitize'=>FALSE));
         $field_element['#description'] = $translation;
       }
@@ -320,7 +320,11 @@ function theme_field_group_conditional_wrapper($variables) {
         }
       }
 
-      if (empty($variables['settings']['keep_descriptions']) && !empty($title_element['#description']) && !empty($field_element['#bundle'])) {
+      if (empty($variables['settings']['keep_descriptions']) &&
+        !empty($title_element['#description']) &&
+        !empty($field_element['#bundle'])
+        && function_exists('i18n_string_translate')) {
+
         $translation = i18n_string_translate(array('field', $field_element['#field_name'], $field_element['#bundle'], 'description'), $title_element['#description'], array('langcode'=>$GLOBALS['language']->language, 'sanitize'=>FALSE));
         $descriptions[] = $translation;
         unset($title_element['#description']);
@@ -495,7 +499,7 @@ function _field_group_conditional_set_attributes($element, $attributes = array()
 }
 
 function _field_group_conditional_translate($string, $name) {
-  return function_exists('i18n_string') ? i18n_string_translate("field_group:$name", $string) : $string;
+  return function_exists('i18n_string_translate') ? i18n_string_translate("field_group:$name", $string) : $string;
 }
 
 function _field_group_conditional_find_element_with_attribute(&$element, $attribute, $return_all = FALSE, $return_reference = FALSE) {
