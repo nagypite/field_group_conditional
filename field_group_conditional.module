@@ -44,17 +44,23 @@ function field_group_conditional_field_group_format_settings($group) {
         '#default_value' => isset($group->format_settings['instance_settings']['condition_alt']) ? $group->format_settings['instance_settings']['condition_alt'] : @$formatter['instance_settings']['condition_alt'],
         '#weight' => 3,
       );
+      $form['instance_settings']['condition_alt_en'] = array(
+        '#title' => t('Condition text: en'),
+        '#type' => 'textfield',
+        '#default_value' => isset($group->format_settings['instance_settings']['condition_alt_en']) ? $group->format_settings['instance_settings']['condition_alt_en'] : @$formatter['instance_settings']['condition_alt_en'],
+        '#weight' => 4,
+      );
       $form['instance_settings']['singlecol_head'] = array(
         '#title' => t('Head row in a single column'),
         '#type' => 'checkbox',
         '#default_value' => isset($group->format_settings['instance_settings']['singlecol_head']) ? $group->format_settings['instance_settings']['singlecol_head'] : @$formatter['instance_settings']['singlecol_head'],
-        '#weight' => 4,
+        '#weight' => 5,
       );
       $form['instance_settings']['keep_descriptions'] = array(
         '#title' => t('Leave descriptions at their corresponding fields'),
         '#type' => 'checkbox',
         '#default_value' => isset($group->format_settings['instance_settings']['keep_descriptions']) ? $group->format_settings['instance_settings']['keep_descriptions'] : @$formatter['instance_settings']['keep_descriptions'],
-        '#weight' => 4,
+        '#weight' => 6,
       );
       break;
   }
@@ -74,6 +80,7 @@ function field_group_conditional_field_group_formatter_info() {
         'instance_settings' => array(
           'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
           'condition_alt' => '',
+          'condition_alt_en' => '',
           'singlecol_head' => '',
           'keep_descriptions' => '',
           'classes' => '',
@@ -87,6 +94,7 @@ function field_group_conditional_field_group_formatter_info() {
         'instance_settings' => array(
           'col_map' => FIELD_GROUP_CONDITIONAL_COL_MAP_SPAN,
           'condition_alt' => '',
+          'condition_alt_en' => '',
           'singlecol_head' => '',
           'keep_descriptions' => '',
           'classes' => '',
@@ -283,7 +291,15 @@ function theme_field_group_conditional_wrapper($variables) {
         $col_map_pos[0]++;
       }
       else if (count($rows) === 1) {
-        $state_print_label = empty($variables['settings']['condition_alt'])?t('If yes:'):$variables['settings']['condition_alt'];
+        if (!empty($variables['settings']['condition_alt_en']) && $GLOBALS['language']->language == 'en') {
+          $state_print_label = $variables['settings']['condition_alt_en'];
+        }
+        else if (!empty($variables['settings']['condition_alt'])) {
+          $state_print_label = $variables['settings']['condition_alt'];
+        }
+        else {
+          $state_print_label = t('If yes:');
+        }
       }
       else {
         $state_print_label = false;
@@ -304,7 +320,7 @@ function theme_field_group_conditional_wrapper($variables) {
         }
       }
 
-      if (empty($variables['settings']['keep_descriptions']) && !empty($title_element['#description'])) {
+      if (empty($variables['settings']['keep_descriptions']) && !empty($title_element['#description']) && !empty($field_element['#bundle'])) {
         $translation = i18n_string_translate(array('field', $field_element['#field_name'], $field_element['#bundle'], 'description'), $title_element['#description'], array('langcode'=>$GLOBALS['language']->language, 'sanitize'=>FALSE));
         $descriptions[] = $translation;
         unset($title_element['#description']);

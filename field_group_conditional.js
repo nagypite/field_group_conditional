@@ -21,12 +21,12 @@ Drupal.behaviors.FieldGroupConditional = {
         childMap.push({obj:$child, ifvalue:children[childSelector]});
       }
 
-      $parentEmt.change(function(){
+      $parentEmt.on('change input', function(){
         var parentVal = $parentEmt.not(':disabled').filter(':checked').val(), disabled, changeQueue = [];
 
-//        console.log('parentChange', $parentEmt, parentVal);
+        // console.log('parentChange', $parentEmt, parentVal);
         $.each(childMap, function(cid, child) {
-//          console.log('childmap', parentSelector, parentVal, child);
+          // console.log('childmap', parentSelector, parentVal, child);
           if (parentVal === undefined) {
             disabled = true;
           }
